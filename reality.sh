@@ -7,11 +7,40 @@ CONFIG_FILE="${CONFIG_DIR}/config.json"
 BIN_FILE="/usr/local/bin/sing-box"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
+# 强制启用并永久生效 BBR
+function enable_bbr() {
+    echo "启用 BBR 拥塞控制..."
+    # 尝试加载内核模块（若已内置或不存在则忽略错误）
+    modprobe tcp_bbr 2>/dev/null || true
+    # 开机自动加载模块
+    echo "tcp_bbr" > /etc/modules-load.d/bbr.conf
+    # 持久化 sysctl
+    cat > /etc/sysctl.d/99-bbr.conf <<'EOF'
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+EOF
+    # 立即生效
+    sysctl -w net.core.default_qdisc=fq >/dev/null 2>&1 || true
+    sysctl -w net.ipv4.tcp_congestion_control=bbr >/dev/null 2>&1 || true
+    sysctl -p /etc/sysctl.d/99-bbr.conf >/dev/null 2>&1 || sysctl --system >/dev/null 2>&1 || true
+    # 校验
+    CUR_CC=$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null || echo "")
+    AVAIL_CC=$(sysctl -n net.ipv4.tcp_available_congestion_control 2>/dev/null || echo "")
+    if [ "$CUR_CC" = "bbr" ] || echo "$AVAIL_CC" | grep -qw bbr; then
+        echo "BBR 已启用（当前拥塞控制: ${CUR_CC:-unknown}）"
+    else
+        echo "警告：未检测到 BBR，可用拥塞控制: ${AVAIL_CC}"
+    fi
+}
+
 function install_singbox() {
     if [ "$(id -u)" -ne 0 ]; then
       echo "请用 root 权限运行此脚本"
       exit 1
     fi
+
+    # 在安装流程最开始启用并持久化 BBR
+    enable_bbr
 
     apt-get update -y
     apt-get install -y curl unzip jq openssl tar
