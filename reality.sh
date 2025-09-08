@@ -175,7 +175,7 @@ EOF
 
     # 生成 vless:// 链接
     SERVER_IP=$(curl -s ipv4.icanhazip.com)
-    VLESS_URL="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=chrome&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp#Reality"
+    VLESS_URL="vless://${UUID}@${SERVER_IP}:${PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${SNI}&fp=ios&pbk=${PUBLIC_KEY}&sid=${SHORT_ID}&type=tcp#Reality"
 
     echo -e "\n======================"
     echo "Sing-Box Reality 安装完成 ✅"
